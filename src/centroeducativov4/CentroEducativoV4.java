@@ -6,7 +6,9 @@
 package centroeducativov4;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Iterator;
 import java.util.Map;
@@ -21,7 +23,7 @@ public class CentroEducativoV4 {
 
     public static String curso;
     public static double pagoPorHoraExtra;
-    static TreeMap<String, Persona> lista = new TreeMap<String, Persona>();
+    static ArrayList<Persona> lista = new ArrayList<Persona>(); 
     static TreeMap<String, String> tmEEEE = new TreeMap<String, String>();//Map con entidades bancarias
     static TreeMap<String, String> tmEEEESSSS = new TreeMap<String, String>();//Map con sucursales bancarias
     static TreeMap<String, String> tmCC = new TreeMap<String, String>();//Map con nombres de cursos
@@ -35,7 +37,7 @@ public class CentroEducativoV4 {
         pagoPorHoraExtra = pPorHoraExtra;
     }
 
-    public static void setLista(TreeMap<String, Persona> list) {
+    public static void setLista(ArrayList<Persona> list) {
         lista = list;
     }
 
@@ -63,7 +65,7 @@ public class CentroEducativoV4 {
         return pagoPorHoraExtra;
     }
 
-    public static TreeMap<String, Persona> getLista() {
+    public static ArrayList<Persona> getLista() {
         return lista;
     }
 
@@ -102,6 +104,7 @@ public class CentroEducativoV4 {
             try {
                 if (fPersonas.exists()) {//Si existe el fichero podemos leer los registros que tiene
                     lista = FuncionesFicheros.obtenerDatosFichero(fPersonas);
+                 
                 } else {
                     fPersonas.createNewFile();
                 }
@@ -141,8 +144,8 @@ public class CentroEducativoV4 {
                         imprimirListados("Curso Académico: %s\nLISTADO DE ALUMNOS\nAPELLIDOS/NOMBRE\n", false, true);
                         break;
                     case 0:
-                    default:   
-                        FuncionesFicheros.almacenarDatosFichero(lista, fPersonas);  
+                    default:
+                        FuncionesFicheros.almacenarDatosFichero(lista, fPersonas);
                         salir = true;
                         break;
 
@@ -162,6 +165,9 @@ public class CentroEducativoV4 {
         Profesor profe;
         Persona per = null;
         correcto = false;
+        // CREAMOS UN FICHERO PARA GUARDAR LOS PROFESORES
+        File ruta = new File("Profesores");//crea un objeto con una ruta
+        File fPersonas = new File(ruta, "Personas3.dat");//crea un objeto fichero en la ruta
 
         do {
 
@@ -186,10 +192,19 @@ public class CentroEducativoV4 {
                             profe.nuevoProfesor();
                             key = profe.getApellidos() + ", " + profe.getNombre();
                             System.out.println(key);
-                            if (lista.containsKey(key)) {
+                            
+                            if (contieneKey(key, lista)) {
                                 throw new Exception("Este nombre ya existe. No puedo grabarlo");
                             }
-                            lista.put(key, profe);
+                            
+                            FuncionesFicheros.almacenarDatosFichero(lista, fPersonas);  //Guardamos el objeto en el fichero
+                            
+                            lista.add(profe); // Lo añadimos a la lista
+                            
+                        } catch (FileNotFoundException fnf) {
+                            System.out.println(fnf.getMessage());                        
+                        } catch (IOException ex) {
+                            System.out.println(ex.getMessage());                        
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
                         }
@@ -204,10 +219,11 @@ public class CentroEducativoV4 {
                                 System.out.println("indique el apellido del profesor:");
                                 String a = sc.nextLine();
                                 key = a + ", " + n;
-                                if (lista.containsKey(key) == false) {
+                                
+                                if (contieneKey(key, lista)) {
                                     throw new Exception("El nombre que desea eliminar no existe");
                                 }
-                                lista.remove(key);
+                                eliminarObjetoLista(key, lista);
                                 correcto = true;
                             } catch (Exception e) {
                                 System.out.println(e.getMessage());
@@ -226,14 +242,15 @@ public class CentroEducativoV4 {
                                 String a = sc.nextLine();
                                 key = a + ", " + n;
 
-                                if (lista.containsKey(key)) {
-                                    per = lista.get(key);
+                                 if (contieneKey(key, lista)) {
+                                    per = getObjetoPersonaByKey(key, lista);
                                 } else {
                                     throw new Exception("El profesor no existe.");
                                 }
+                                 
                                 if (per instanceof Profesor) {
                                     profe = (Profesor) per;
-                                    System.out.println(lista.get(key).toString());
+                                    System.out.println(per.toString());
                                 } else {
                                     throw new Exception("No se trata de un profesor. ");
                                 }
@@ -253,18 +270,19 @@ public class CentroEducativoV4 {
                                 System.out.println("Opcion seleccionada: Introducir horas extras por mes: ");
                                 System.out.println("Horas extraordinarias por los profesores en el mes de: ");
                                 mes = sc.nextInt();
+                                
                                 if (mes < 0 && mes > 12) {
                                     throw new Exception("Mes incorrecto.");
                                 }
 
-                                Iterator it = lista.keySet().iterator();
+                                Iterator it = lista.iterator();
 
                                 while (it.hasNext()) {
-                                    key = (String) it.next();
-                                    if (lista.get(key) instanceof Profesor) {
-                                        profe = (Profesor) lista.get(key);
+                                    
+                                    if (it.next() instanceof Profesor) {
+                                        profe = (Profesor) it.next();
                                         System.out.println("Nombre del profesor: ");
-                                        System.out.println(key);
+                                        System.out.println(profe.getApellidos() + ", " + profe.getNombre());
                                         System.out.println("Horas realizadas: ");
                                         horas = sc.nextInt();
                                         if (horas > 20) {
@@ -283,11 +301,10 @@ public class CentroEducativoV4 {
                         break;
                     case 5:
                         System.out.println("Opción seleccionada: Imprime datos personales de los profesores.");
-                        Iterator it = lista.keySet().iterator();
+                        Iterator it = lista.iterator();
                         
                         while (it.hasNext()) {                            
-                            key = (String) it.next();
-                            per = lista.get(key);
+                            per = (Persona) it.next();
                             if (per instanceof Profesor) {
                                 profe = (Profesor) per;                                
                                 System.out.println(profe.ImprimeProfesor());
@@ -299,11 +316,12 @@ public class CentroEducativoV4 {
                     case 6:
                         System.out.println("Opción seleccionada: Datos de las clases que imparten los profesores.");
                         
-                        it = lista.keySet().iterator();
-                        while (it.hasNext()) {
-                            key = (String) it.next();
-                            if (lista.get(key) instanceof Profesor) {
-                                profe = (Profesor) lista.get(key);
+                        it = lista.iterator();
+                        
+                        while (it.hasNext()) {                            
+                            per = (Persona) it.next();
+                            if (per instanceof Profesor) {
+                                profe = (Profesor) per;
                                 System.out.println(profe.imprimeAsignaturas());                        
                                 System.out.println();
                             }
@@ -321,10 +339,9 @@ public class CentroEducativoV4 {
                                 if (mes < 1 || mes > 12) {
                                     throw new InputMismatchException("Error al introducir el mes del año: ");
                                 }
-                                it = lista.keySet().iterator();
-                                while (it.hasNext()) {
-                                    key = (String) it.next();
-                                    per = lista.get(key);
+                                it = lista.iterator();
+                                while (it.hasNext()) {                            
+                                    per = (Persona) it.next();
                                     if (per instanceof Profesor) {
                                         profe = (Profesor) per;
                                         System.out.println(profe.ImprimirNominas(mes));
@@ -350,7 +367,7 @@ public class CentroEducativoV4 {
                             System.out.println("Apellidos del Profesor: ");
                             String a = sc.nextLine();
                             key = a + ", " + n;
-                            per = lista.get(key);
+                            per = getObjetoPersonaByKey(key, lista);
                             if (per instanceof Persona) {
                                 profe = (Profesor) per;
                                 System.out.println(profe.toString());
@@ -401,7 +418,7 @@ public class CentroEducativoV4 {
 
                         String nombreCompleto = alumn.getApellidos() + ", " + alumn.getNombre();
                         try {
-                            lista.put(nombreCompleto, alumn);
+                            lista.add(alumn);
                             System.out.println("El alumno ha sido dado de alta correctamente.");
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
@@ -413,9 +430,11 @@ public class CentroEducativoV4 {
                             System.out.println("\t2. BAJA DE UN ALUMNO");
                             nombreCompleto = getKey();
 
-                            if (lista.containsKey(nombreCompleto)) {
-                                if (lista.get(nombreCompleto) instanceof Alumno) {
-                                    lista.remove(nombreCompleto);
+                            if (contieneKey(nombreCompleto, lista)) {
+                                Persona per = getObjetoPersonaByKey(nombreCompleto, lista);
+                                
+                                if (per instanceof Alumno) {
+                                    lista.remove(per);
                                 } else {
                                     throw new Exception("No se puede eliminar este registro al no tratarse de un alumno. ");
                                 }
@@ -435,9 +454,12 @@ public class CentroEducativoV4 {
                             System.out.println("\t3. CONSULTA DE DATOS PERSONALES DE UN ALUMNO");
                             nombreCompleto = getKey();
 
-                            if (lista.containsKey(nombreCompleto)) {
-                                if (lista.get(nombreCompleto) instanceof Alumno) {
-                                    System.out.println(lista.get(nombreCompleto).toString());
+                            if (contieneKey(nombreCompleto, lista)) {
+                                Persona per = getObjetoPersonaByKey(nombreCompleto, lista);
+                                
+                                if (per instanceof Alumno) {
+                                    Alumno alum = (Alumno) per;
+                                    System.out.println(alum.toString());
                                 } else {
                                     throw new Exception("No se puede eliminar este registro al no tratarse de un alumno. ");
                                 }
@@ -453,13 +475,13 @@ public class CentroEducativoV4 {
                     case 4:
                         String[] evaluacion = {"Primera Evaluación", "Segunda Evaluación", "Tercera Evaluación", "Evaluación Ordinaria", "Evaluación Extraordinaria"};
                         System.out.println("\t4. INTRODUCIR NOTAS DE UNA ASIGNATURA Y EVALUACION A TODOS LOS MATRICULADOS");
-                        Iterator it = lista.keySet().iterator();
+                        Iterator it = lista.iterator();
 
                         while (it.hasNext()) {
-                            key = (String) it.next();
-                            if (lista.get(key) instanceof Alumno) {
-                                System.out.println("Alumno: " + key + ":");
-                                Alumno al = (Alumno) lista.get(key);
+                        Persona per = (Persona) it.next();
+                            if ((per) instanceof Alumno) {
+                                System.out.println("Alumno: " + per.getApellidos() + ", " + per.getNombre() + ":");
+                                Alumno al = (Alumno) per;
                                 Iterator itAsignatura = al.getTmAsignaturasAlumno().keySet().iterator();
 
                                 try {
@@ -496,11 +518,11 @@ public class CentroEducativoV4 {
                                 System.out.println("Indique el código de un curso: ");
                                 String curso = sc.nextLine().toUpperCase();
                                 if (tmCC.containsKey(curso)) {
-                                    it = lista.keySet().iterator();
+                                    it = lista.iterator();
                                     while (it.hasNext()) {
-                                        key = (String) it.next();
-                                        if (lista.get(key) instanceof Alumno) {
-                                            alumn = (Alumno) lista.get(key);
+                                        Persona per = (Persona) it.next();
+                                        if (per instanceof Alumno) {
+                                            alumn = (Alumno) per;
                                             if (alumn.getCurso().equalsIgnoreCase(curso)) {
                                                 System.out.println(alumn.toString());
                                             }
@@ -526,11 +548,11 @@ public class CentroEducativoV4 {
                                 System.out.println("Indique una Asignatura: ");
                                 String asig = sc.nextLine().toUpperCase();
                                 if (tmCCASIGNA.containsKey(asig)) {
-                                    it = lista.keySet().iterator();
+                                    it = lista.iterator();
                                     while (it.hasNext()) {
-                                        key = (String) it.next();
-                                        if (lista.get(key) instanceof Alumno) {
-                                            alumn = (Alumno) lista.get(key);
+                                        Persona per = (Persona) it.next();
+                                        if (per instanceof Alumno) {
+                                            alumn = (Alumno) per;
                                             if (alumn.getTmAsignaturasAlumno().containsKey(asig)) {
                                                 System.out.println(alumn.toString());
                                             }
@@ -557,11 +579,11 @@ public class CentroEducativoV4 {
                             String codCurso = sc.nextLine();
                             System.out.println("Indique el número de la evaluación: ");
                             int eval = sc.nextInt();
-                            it = lista.keySet().iterator();
+                            it = lista.iterator();
                             while (it.hasNext()) {
-                                key = (String) it.next();
-                                if (lista.get(key) instanceof Alumno) {
-                                    alumn = (Alumno) lista.get(key);
+                                Persona per = (Persona) it.next();
+                                if (per instanceof Alumno) {
+                                    alumn = (Alumno) per;
                                     System.out.println(alumn.boletinNotas(codCurso, eval));
                                 }
                             }
@@ -602,25 +624,88 @@ public class CentroEducativoV4 {
         return nombreCompleto.toString();
     }
 
+   
     /**
      *
      * @param text
      * @param p
-     * @param s
+     * @param a
      */
-    public static void imprimirListados(String text, boolean p, boolean s) {
+    public static void imprimirListados(String text, boolean p, boolean a) {
         System.out.printf(text, getCurso());
 
-        String t = (p && !s) ? "(P) " : "";
-
-        for (Map.Entry<String, Persona> entry : lista.entrySet()) {
-            if (p && entry.getValue() instanceof Profesor) {
-                System.out.printf("%s%s, %s\n", t, entry.getValue().getApellidos(), entry.getValue().getNombre());
-            } else if (s && entry.getValue() instanceof Alumno) {
-                Alumno a = Alumno.class.cast(entry.getValue());
-
-                System.out.printf("(%s) %s, %s\n", a.getCurso(), a.getApellidos(), a.getNombre());
+        for (Persona persona : lista) {
+            if (p && persona instanceof Profesor) {
+                  System.out.printf("%s%s, %s\n", "(P)", persona.getApellidos(), persona.getNombre());
+            } else if (a && persona instanceof Alumno) {
+                Alumno alumno = (Alumno) persona;
+                System.out.printf("(%s) %s, %s\n", alumno.getCurso(), alumno.getApellidos(), alumno.getNombre());
             }
         }
+
     }
+
+   /**
+    * 
+    * @param key
+    * @param lista
+    * @return 
+    */
+    public static boolean contieneKey(String key, ArrayList<Persona> lista){        
+        boolean containsKey = false;
+        String k;
+        if (! lista.isEmpty()) {            
+            for (Persona persona : lista) {
+                k = persona.getApellidos() + ", " + persona.getNombre();
+                if(key.equalsIgnoreCase(k)) containsKey = true;
+            }
+        }
+        return containsKey;
+    }
+    
+    /**
+     * 
+     * @param key
+     * @param lista 
+     */
+    public static void eliminarObjetoLista(String key, ArrayList<Persona> lista){
+        String k;
+        
+        if (! lista.isEmpty()) {
+            for (Persona persona : lista) {
+                k = persona.getApellidos() + ", " + persona.getNombre();
+                if(key.equalsIgnoreCase(k)){
+                    lista.remove(persona);
+                    break;
+                }
+            }
+        }
+        
+    }
+    
+    /**
+     * 
+     * @param key
+     * @param lista
+     * @return 
+     */
+    public static Persona getObjetoPersonaByKey(String key, ArrayList<Persona> lista){
+        String k;
+        int id = 0;
+        Persona per = new Persona();
+        
+        if (! lista.isEmpty()) {
+            for (Persona persona : lista) {
+                
+                k = persona.getApellidos() + ", " + persona.getNombre();
+                
+                if(key.equalsIgnoreCase(k)){
+                    per = lista.get(id);
+                }
+                id++;
+            }
+        }
+        return per;
+    }
+    
 }

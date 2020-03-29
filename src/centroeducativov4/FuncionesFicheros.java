@@ -12,7 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.TreeMap;
+import java.util.ArrayList;
 
 /**
  *
@@ -25,19 +25,23 @@ public class FuncionesFicheros {
      * @param lista
      * @param fichero 
      */
-    public static void almacenarDatosFichero(TreeMap<String, Persona> lista, File fichero){
+    public static void almacenarDatosFichero(ArrayList<Persona> lista, File fichero){
         FileOutputStream fos = null;
         ObjectOutputStream salida = null;
-        Persona p;
         
         try {
-           if (! fichero.exists()) fichero.createNewFile(); //Si el fichero no existiese se crea 
-            //Se crea el fichero
+            if (!fichero.exists()) {
+                fichero.createNewFile(); //Si el fichero no existiese se crea 
+            }            //Se crea el fichero
+
+            fos = new FileOutputStream(fichero);
+            salida = new ObjectOutputStream(fos);
             
-            if(! lista.isEmpty()){
-                fos = new FileOutputStream(fichero);
-                salida = new ObjectOutputStream(fos);               
-                salida.writeObject(lista);
+            if (! lista.isEmpty()) {
+                for (Persona persona : lista) { //Para proposito de la práctica se graba de objeto a objeto, 
+                    salida.writeObject(persona);//sin embargo, se puede serializar el ArrayList directamente
+                }
+                
                 salida.flush();
             }
             
@@ -62,28 +66,33 @@ public class FuncionesFicheros {
      * @return
      * @throws IOException 
      */
-    public static TreeMap<String, Persona> obtenerDatosFichero(File fichero) throws IOException {
-        TreeMap<String, Persona> lista = new TreeMap<>();
+    public static ArrayList obtenerDatosFichero(File fichero) throws IOException {
+        ArrayList<Persona> lista = new ArrayList<>();
         FileInputStream fis = null;
         ObjectInputStream entrada = null;
-        Persona p;
         
         try{
             if(! fichero.exists()) throw new Exception("El fichero no se encunetra. ");
             
             fis = new FileInputStream(fichero);
             entrada = new ObjectInputStream(fis);
+            Persona per = (Persona) entrada.readObject();
+                    
+            while(per != null){
+                lista.add(per);
+                per = (Persona) entrada.readObject();
+            }
             
-            lista = (TreeMap<String, Persona>) entrada.readObject();
-            
+            System.out.println("despues");
+            entrada.close();
         } catch (FileNotFoundException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Excepción fichero no encontrado: " +e.getMessage());
         } catch (ClassNotFoundException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Excepción de clase " +e.getMessage());
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Excepción general: " +e.getMessage());
             
         } finally {
             try {
