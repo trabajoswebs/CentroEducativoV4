@@ -236,7 +236,7 @@ public class Cuenta {
             }
         }
         catch (FileNotFoundException fnf) {
-            fnf.printStackTrace();
+            System.out.println("No se ha podido encontrar el archivo: " + fnf.getMessage());
         }
         catch (IOException ioe) {
             System.out.println("Ha ocurrido una excepción: " + ioe.getMessage());    
